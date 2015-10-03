@@ -13,23 +13,32 @@ object StreamProgram {
 
   val sayFlow: Flow[String, String, Unit] =
     Flow[String].map { s =>
-      println(s)
-      s
+      s + "."
     }
 
   val shoutFlow: Flow[String, String, Unit] =
     Flow[String].map { s =>
-      println(s + "!!!!")
-      s
+      s + "!!!!"
+    }
+
+  val sayAndShoutFlow: Flow[String, String, Unit] =
+    Flow() { implicit b =>
+      import FlowGraph.Implicits._
+
+      val broadcast = b.add(Broadcast[String](2))
+      val merge = b.add(Merge[String](2))
+
+      broadcast ~> sayFlow ~> merge
+      broadcast ~> shoutFlow ~> merge
+      (broadcast.in, merge.out)
     }
 
   def run(): Unit = {
     implicit lazy val system = ActorSystem("example")
     implicit val materializer = ActorMaterializer()
-    Source(List("Hello World!"))
-      .via(sayFlow)
-      .via(shoutFlow)
-      .runWith(Sink.ignore)
+    Source(List("Hello World"))
+      .via(sayAndShoutFlow)
+      .runWith(Sink.foreach(println))
       .onComplete {
         case _ => system.shutdown()
       }
@@ -81,8 +90,8 @@ object StreamFile {
       .via(Framing.delimiter(
         ByteString("\n"), maximumFrameLength = Int.MaxValue,
         allowTruncation = true))
-      .map(x => println(x.utf8String))
-      .runWith(Sink.ignore)
+      .map(_.utf8String)
+      .runWith(Sink.foreach(println))
       .onComplete(_ => system.shutdown())
   }
 }
