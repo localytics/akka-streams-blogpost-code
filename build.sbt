@@ -29,6 +29,7 @@ libraryDependencies ++= {
     // see https://github.com/etorreborre/specs2/issues/296#issuecomment-94796264
     "org.scalatest" %% "scalatest" % "latest.release" % "test",
     "org.scalacheck" %% "scalacheck" % "latest.release" % "test",
+
     "com.typesafe.akka" %% "akka-stream-experimental" % "2.0.2",
     "org.scalaz" %% "scalaz-core" % scalazVer,
     "org.scalaz" %% "scalaz-effect" % scalazVer
