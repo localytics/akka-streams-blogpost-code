@@ -2,7 +2,7 @@ package main
 
 import akka.actor.ActorSystem
 import akka.util.ByteString
-import akka.stream.{ActorMaterializer, ActorAttributes}
+import akka.stream.{FlowShape, ActorMaterializer, ActorAttributes}
 import akka.stream.io._
 import java.io.{InputStream, ByteArrayInputStream}
 import akka.stream.scaladsl._
@@ -22,16 +22,18 @@ object StreamProgram {
     }
 
   val sayAndShoutFlow: Flow[String, String, Unit] =
-    Flow() { implicit b =>
-      import FlowGraph.Implicits._
+    Flow.fromGraph(
+      GraphDSL.create() { implicit b =>
+        import GraphDSL.Implicits._
 
-      val broadcast = b.add(Broadcast[String](2))
-      val merge = b.add(Merge[String](2))
+        val broadcast = b.add(Broadcast[String](2))
+        val merge = b.add(Merge[String](2))
 
-      broadcast ~> sayFlow ~> merge
-      broadcast ~> shoutFlow ~> merge
-      (broadcast.in, merge.out)
-    }
+        broadcast ~> sayFlow ~> merge
+        broadcast ~> shoutFlow ~> merge
+        FlowShape(broadcast.in, merge.out)
+      }
+    )
 
   def run(): Unit = {
     implicit lazy val system = ActorSystem("example")
@@ -85,7 +87,7 @@ object StreamFile {
     implicit lazy val system = ActorSystem("example")
     implicit val materializer = ActorMaterializer()
     val is = new ByteArrayInputStream("hello\nworld".getBytes)
-    InputStreamSource(() => is)
+    StreamConverters.fromInputStream(() => is)
       .withAttributes(ActorAttributes.dispatcher("akka.stream.default-file-io-dispatcher"))
       .via(Framing.delimiter(
         ByteString("\n"), maximumFrameLength = Int.MaxValue,
@@ -108,7 +110,7 @@ object AckedFileStream {
   case class QueueElement(qm: QueueMessage) extends Element
 
   def fileStream(m: QueueMessage): Source[StringElement, Future[Long]] =
-    InputStreamSource(() => m.stream)
+    StreamConverters.fromInputStream(() => m.stream)
       .via(Framing.delimiter(
         ByteString("\n"), maximumFrameLength = Int.MaxValue,
         allowTruncation = true))
@@ -121,7 +123,7 @@ object AckedFileStream {
       .map { qm =>
           fileStream(qm)
           .concat(Source(List(QueueElement(qm))))
-      }.flatten(FlattenStrategy.concat)
+      }.flatMapConcat(identity)
       .runWith(Sink.foreach { (r: Element) => r match {
         case QueueElement(qm) => qm.ack()
         case StringElement(s) => println(s)

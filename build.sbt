@@ -1,8 +1,8 @@
-name := """stream-example"""
+name := "stream-example"
 
 version := "1.0-SNAPSHOT"
 
-scalaVersion := "2.11.6"
+scalaVersion := "2.11.7"
 
 scalacOptions ++= Seq(
   "-deprecation",
@@ -23,11 +23,15 @@ resolvers ++= Seq(
 
 resolvers += "Sonatype snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
 
-libraryDependencies ++= Seq(
-  // see https://github.com/etorreborre/specs2/issues/296#issuecomment-94796264
-  "org.scalatest" %% "scalatest" % "latest.release" % "test",
-  "org.scalacheck" %% "scalacheck" % "latest.release" % "test",
-  "com.typesafe.akka" % "akka-stream-experimental_2.11" % "1.0",
-  "org.scalaz" %% "scalaz-core" % "7.1.0", //"latest.release",
-  "org.scalaz" %% "scalaz-effect" % "7.1.0" //"latest.release",
-)
+libraryDependencies ++= {
+  val scalazVer = "7.1.0"    // or "latest.release"
+  Seq(
+    // see https://github.com/etorreborre/specs2/issues/296#issuecomment-94796264
+    "org.scalatest" %% "scalatest" % "latest.release" % "test",
+    "org.scalacheck" %% "scalacheck" % "latest.release" % "test",
+
+    "com.typesafe.akka" %% "akka-stream-experimental" % "2.0.2",
+    "org.scalaz" %% "scalaz-core" % scalazVer,
+    "org.scalaz" %% "scalaz-effect" % scalazVer
+  )
+}
